@@ -3,7 +3,10 @@
 % that data are evenly spaced.
 %
 % IN:
-% dat: vector of data for which the small gaps should be interpolated
+% dat: vector of data for which the small gaps should be interpolated. Can
+%   also be array, with data in columns and rows corresponding to
+%   observations. In this case, missing data need to occur simultaneously
+%   in each column.
 % gap: maximum gap size in units of smaples to interpolate
 % 'ndseq': array of missing data sequences, with beginning indices of 
 %   missing data in the first column, end indices of missing data in the 
@@ -17,13 +20,15 @@
 %
 % TO DO:
 % - generalize to unevenly spaced data vectors
+% - allow for interpolation of matrix with data in columns missing values
+%   from same rows 
 %
 % Adrian Tasistro-Hart, 02.10.2018
 
 function dat = interp_smallgap(dat,gap,varargin)
 
 parser = inputParser;
-addRequired(parser,'dat',@isvector);
+addRequired(parser,'dat',@isnumeric);
 addRequired(parser,'gap',@isscalar);
 addParameter(parser,'ndseq',[],@isnumeric);
 
@@ -34,9 +39,11 @@ gap = parser.Results.gap;
 ndseq = parser.Results.ndseq;
 
 % make column
-dat = dat(:);
+if isvector(dat)
+    dat = dat(:);
+end
 % number of data
-ndat = length(dat);
+ndat = size(dat,1);
 
 % if ndseq not provided, then compute
 if isempty(ndseq)
@@ -47,7 +54,7 @@ else
 end
 
 % get all nans in data
-nandatidx = isnan(dat);
+nandatidx = isnan(dat(:,1));
 
 % get indices of big gaps 
 bigidx = find(ndseq(:,3) > gap);
@@ -76,9 +83,9 @@ datsmallidx = singlenanidx | datsmallidx;
 % create temporary time vector
 t = 1:ndat;
 % interpolate values
-datint = interp1(t(~datsmallidx),dat(~datsmallidx),t(datsmallidx),...
+datint = interp1(t(~datsmallidx),dat(~datsmallidx,:),t(datsmallidx),...
     'linear');
 % replace corresponding nans
-dat(datsmallidx) = datint;
+dat(datsmallidx,:) = datint;
 
 end
