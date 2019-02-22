@@ -10,3 +10,5 @@ Goals/To do:
 -   [ ] Train networks only on storm time series
 -   [ ] Consider subsets of input OMNI data to train on and compare effectiveness of corresponding networks
 -   [ ] Interrogate neurons of trained networks to elucidate their sensitivities to particular inputs and thereby try to uncover whether or not a physical model was approximated by the network (e.g. did the network construct any terms analogous to those outlined by Burton et al. 1975?)
+
+Note to self: first ssh @ela.cscs.ch *then* ssh daint
