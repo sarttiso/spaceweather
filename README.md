@@ -5,7 +5,7 @@ Notebooks for a project with aim of predicting the response of Earth's external 
 Goals/To do:
 
 -   [x] First zonal harmonic prediction with basic LSTM network,  [forecasting_q10_LSTM](forecasting_q10_LSTM.ipynb)
--   [ ] Dst prediction with basic LSTM network (to compare with previous results), [forecasting_Dst_LSTM](forecasting_Dst_LSTM.ipynb)
+-   [x] Dst prediction with basic LSTM network (to compare with previous results), [forecasting_Dst_LSTM](forecasting_Dst_LSTM.ipynb)
 -   [ ] Implement Garnelo et al.'s Bayesian neural network architecture and apply to first zonal harmonic prediction
 -   [ ] Train networks only on storm time series
 -   [ ] Consider subsets of input OMNI data to train on and compare effectiveness of corresponding networks
