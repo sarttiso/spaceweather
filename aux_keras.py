@@ -161,9 +161,9 @@ def test_network(dat_in_test, dat_out_test, rnn, batch_size, feature_names, \
     rnn.reset_states()
     dat_pred = rnn.predict(dat_in_test,batch_size=batch_size)
     plt.figure()
-    curtest = np.concatenate((scaler_output.inverse_transform(dat_out_test),\
-                              scaler_output.inverse_transform(dat_pred)), axis=1)
-    plotcorr(curtest, title=feature_names)
+    x = scaler_output.inverse_transform(dat_out_test)
+    y = scaler_output.inverse_transform(dat_pred)
+    plotcorr(x, y, title=feature_names)
     return dat_pred
 
 """
@@ -181,15 +181,18 @@ Plot scatter plot with 1:1 line and point density contours.
 IN:
 data (nd.array): ndata x 2 array
 """
-def plotcorr(data, title=''):
-    plt.scatter(data[:,0], data[:,1], marker='.')
-    k = kde.gaussian_kde(data.T)
-    x, y = data.T
+def plotcorr(x, y, title=''):
+    x = x.squeeze()
+    y = y.squeeze()
+    x = x.reshape(1, -1)
+    y = y.reshape(1, -1)
+    plt.scatter(x, y, marker='.')
+    k = kde.gaussian_kde(np.concatenate((x,y), axis=0))
     nbins = 50
     xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
     zi = k(np.vstack([xi.flatten(), yi.flatten()]))                                      
     plt.contour(xi,yi,zi.reshape(xi.shape), 10)
     abline(1,0)
-    r2 = np.corrcoef(data[:,0], data[:,1])[0,1]**2
+    r2 = np.corrcoef(x, y)[0,1]**2
     plt.title('%s, $r^2$ = %1.2f' % (title, r2))
     plt.show()
