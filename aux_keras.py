@@ -9,11 +9,9 @@ Library with helper functions and classes for deep learning with Keras.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import kde
-from sklearn import preprocessing
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, GRU, Dropout
+from keras.layers import Dense, LSTM
 
 
 """
@@ -166,33 +164,3 @@ def test_network(dat_in_test, dat_out_test, rnn, batch_size, feature_names, \
     plotcorr(x, y, title=feature_names)
     return dat_pred
 
-"""
-Plot straight line in current axis.
-"""
-def abline(slope, intercept):
-    axes = plt.gca()
-    x_vals = np.array(axes.get_xlim())
-    y_vals = intercept + slope * x_vals
-    plt.plot(x_vals, y_vals, 'k--')
-
- 
-"""
-Plot scatter plot with 1:1 line and point density contours.
-IN:
-data (nd.array): ndata x 2 array
-"""
-def plotcorr(x, y, title=''):
-    x = x.squeeze()
-    y = y.squeeze()
-    x = x.reshape(1, -1)
-    y = y.reshape(1, -1)
-    plt.scatter(x, y, marker='.')
-    k = kde.gaussian_kde(np.concatenate((x,y), axis=0))
-    nbins = 50
-    xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-    zi = k(np.vstack([xi.flatten(), yi.flatten()]))                                      
-    plt.contour(xi,yi,zi.reshape(xi.shape), 10)
-    abline(1,0)
-    r2 = np.corrcoef(x, y)[0,1]**2
-    plt.title('%s, $r^2$ = %1.2f' % (title, r2))
-    plt.show()
