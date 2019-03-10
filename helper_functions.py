@@ -95,3 +95,56 @@ def abline(slope, intercept):
     x_vals = np.array(axes.get_xlim())
     y_vals = intercept + slope * x_vals
     plt.plot(x_vals, y_vals, 'k--')
+    
+    
+"""
+Isolate periods of storms from external coefficient time series.
+
+IN:
+data (nd.array): time series of data to find storms in
+threshold (float): defines the threshold for which to find indices of intervals
+less (bool): (default = true) whether to define storms as greater than or less 
+    than the threshold value
+nhr_before (int): (default = 36) number of hours before to include in the storm 
+    time series
+nhr_after (int): (default = 100) number of hours after peak values to include in
+    the storm time series
+    
+OUT:
+stormidx (nd.array bool): array of l
+"""
+def findstorm(data, threshold, less=True, nhr_before = 36, nhr_after = 100):
+    
+    ndat = data.shape[0]
+    
+    # first, threshold all q10 values
+    if less:
+        main_idx = data < threshold
+    else:
+        main_idx = data > threshold
+    
+    # indices of q10 > 50
+    thres_idx = findseq(main_idx, 1)
+    
+    # begin with first entry of thresholded indices
+    storm_idx = thres_idx[0,:].reshape(1,-1)
+    # counter
+    c = 0
+    for ii in range(len(thres_idx)-1):
+        if (thres_idx[ii+1,0] - storm_idx[c,1]) < 48:
+            storm_idx[c,1] = thres_idx[ii+1,1]
+            storm_idx[c,2] = storm_idx[c,1] - storm_idx[c,0] + 1
+        else:
+            storm_idx = np.append(storm_idx, thres_idx[ii+1,:].reshape(1,-1), \
+                                  axis=0)
+            c += 1
+    
+    nstorm = storm_idx.shape[0]
+    
+    for ii in range(nstorm):
+        storm_idx[ii,0] = np.max((0, storm_idx[ii,0]-nhr_before))
+        storm_idx[ii,1] = np.min((ndat, storm_idx[ii,0]+nhr_after+nhr_before))
+    
+    storm_idx = storm_idx[:, 0:2]
+    
+    return storm_idx
