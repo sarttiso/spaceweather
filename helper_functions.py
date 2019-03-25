@@ -11,20 +11,21 @@ import matplotlib.pyplot as plt
 from scipy.stats import kde
 from sklearn import preprocessing
 
+"""
+Find sequences of a given value within an input vector. 
 
-# Find sequences of a given value within an input vector. 
-#
-# IN:
-# x: vector of values in which to find sequences
-# val: scalar value to find sequences of in x
-# noteq: (false) whether to find sequences equal or not equal to the supplied
-#    value
-#
-# OUT:
-# idx: array that contains in rows the number of total sequences of val, with 
-#   the first column containing the begin indices of each sequence, the second 
-#   column containing the end indices of sequences, and the third column 
-#   contains the length of the sequence.
+IN:
+ x: vector of values in which to find sequences
+ val: scalar value to find sequences of in x
+ noteq: (false) whether to find sequences equal or not equal to the supplied
+    value
+
+OUT:
+ idx: array that contains in rows the number of total sequences of val, with 
+   the first column containing the begin indices of each sequence, the second 
+   column containing the end indices of sequences, and the third column 
+   contains the length of the sequence.
+"""
 def findseq(x, val, noteq=False):
     x = x.copy().squeeze()
     assert len(x.shape) == 1, "x must be vector"
@@ -72,20 +73,31 @@ data (nd.array): ndata x 2 array
 def plotcorr(x, y, title=''):
     x = x.squeeze()
     y = y.squeeze()
-    x = x.reshape(1, -1)
-    y = y.reshape(1, -1)
+    x = x.reshape(-1, 1)
+    y = y.reshape(-1, 1)
     plt.figure()
     plt.scatter(x, y, marker='.')
-    k = kde.gaussian_kde(np.concatenate((x,y), axis=0))
-    nbins = 50
-    xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-    zi = k(np.vstack([xi.flatten(), yi.flatten()]))                                      
-    plt.contour(xi,yi,zi.reshape(xi.shape), 10)
+    plotcontours(x, y)
     abline(1,0)
     r2 = np.corrcoef(x, y)[0,1]**2
     plt.title('%s, $r^2$ = %1.2f' % (title, r2))
     plt.show()
- 
+    
+    
+"""
+This function plots point density contours.
+
+IN:
+    x (nd.array): xcoords of points
+    y (nd.array): ycoords of points
+    ncountours (int): number of contours to plot
+    nbins (int): number of bins over which to estimate point densities
+"""
+def plotcontours(x, y, ncontours=10, nbins=50):
+    k = kde.gaussian_kde(np.concatenate((x,y), axis=1).T)
+    xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
+    zi = k(np.vstack([xi.flatten(), yi.flatten()]))                                      
+    plt.contour(xi,yi,zi.reshape(xi.shape), ncontours)
     
 """
 Plot straight line in current axis.
@@ -94,14 +106,15 @@ def abline(slope, intercept):
     axes = plt.gca()
     x_vals = np.array(axes.get_xlim())
     y_vals = intercept + slope * x_vals
-    plt.plot(x_vals, y_vals, 'k--')
+    line = plt.plot(x_vals, y_vals, 'k--')
+    return line[0]
     
     
 """
 Isolate periods of storms from external coefficient time series.
 
 IN:
-data (nd.array): time series of data to find storms in
+data (nd.array): time series of Dst data to find storms in
 threshold (float): defines the threshold for which to find indices of intervals
 less (bool): (default = true) whether to define storms as greater than or less 
     than the threshold value
@@ -148,3 +161,26 @@ def findstorm(data, threshold, less=True, nhr_before = 36, nhr_after = 100):
     storm_idx = storm_idx[:, 0:2]
     
     return storm_idx
+
+
+"""
+This function converts indices from the format given by findseq() or findstorm()
+above to logical indices. 
+
+IN:
+idx (nd.array): array of shape (ninterval x 2) where values in the first column 
+    designate that beginning of indexed intervals and values in the second 
+    column designate the end of indexed intervals.
+length (int): length of the output array of logical indices
+
+OUT:
+idx_logical (boolean nd.array): logical indices
+"""
+def convertidx(idx, length):
+    idx_logical = np.zeros(length, dtype=bool)
+    ninterval = idx.shape[0]
+    
+    for ii in range(ninterval):
+        idx_logical[idx[ii,0]:idx[ii,1]+1] = True
+    
+    return idx_logical
