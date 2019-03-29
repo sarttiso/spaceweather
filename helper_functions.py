@@ -79,7 +79,7 @@ def plotcorr(x, y, title=''):
     plt.scatter(x, y, marker='.')
     plotcontours(x, y)
     abline(1,0)
-    r2 = np.corrcoef(x, y)[0,1]**2
+    r2 = np.corrcoef(x.reshape(-1), y.reshape(-1))[0,1]**2
     plt.title('%s, $r^2$ = %1.2f' % (title, r2))
     plt.show()
     
