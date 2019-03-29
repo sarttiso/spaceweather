@@ -184,3 +184,18 @@ def convertidx(idx, length):
         idx_logical[idx[ii,0]:idx[ii,1]+1] = True
     
     return idx_logical
+
+
+"""
+Compute root mean squared error
+
+IN:
+res (nd.array): vector (1D ndarray) of residuals to compute RMSE on
+
+OUT:
+rmse (float): RMSE of given residuals
+"""
+def RMSE(res):
+    assert len(res.shape) == 1, "data should be 1D ndarray"
+    rmse = np.sqrt(np.mean(res**2))
+    return rmse
