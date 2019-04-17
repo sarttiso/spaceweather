@@ -13,68 +13,6 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, LSTM
 
-
-"""
-From a data array with observations in rows and features in columns, split 
-split into testing and training data based on which rows to use (datain_idx), 
-batch_sizes, which features for prediction (incols) and which features as 
-targest (outcols). Since we're concerned with time series forecasting, the 
-number of steps to forecast ahead is lahead.
-
-IN:
-data_in: 
-data_out: 
-batch_size:
-train_percent:
-lahead:
-
-OUT:
-data_in_train:
-data_out_train:
-data_in_test:
-data_out_test:
-
- """
-def datasplit(data_in, data_out, batch_size, train_percent=0.8, lahead=1, \
-              stateful=True):
-    
-    data_in = data_in[0:-lahead,:]
-    data_out = data_out[lahead:,:]
-    
-    ndat = data_in.shape[0]
-    
-    if stateful:
-        # limit for training data
-        lidx = int((train_percent*ndat)-((train_percent*ndat) % batch_size))
-        # limit for testing data
-        ridx = int(ndat - (ndat % batch_size))
-    
-        trainidx = np.zeros(ndat, dtype=bool)
-        trainidx[0:lidx] = True
-        testidx = np.zeros(ndat, dtype=bool)
-        testidx[lidx:ridx] = True
-    else:
-        nbatch = int(np.floor(ndat/batch_size))
-    
-        # now construct training and testing sets
-        batchrand = np.random.permutation(int(nbatch))
-        trainbatch = batchrand[0:int(train_percent*nbatch)]
-        testbatch = batchrand[int(train_percent*nbatch):]
-        
-        trainidx = np.zeros(ndat, dtype=bool)
-        for batchidx in trainbatch:
-            trainidx[batchidx*batch_size:batch_size*(batchidx + 1)] = True
-            
-        testidx = np.zeros(ndat, dtype=bool)
-        for batchidx in testbatch:
-            testidx[batchidx*batch_size:batch_size*(batchidx + 1)] = True
-    
-    data_in_train = data_in[trainidx,:]
-    data_out_train = data_out[trainidx,:]
-    data_in_test = data_in[testidx,:]
-    data_out_test = data_out[testidx,:]
-    return data_in_train, data_out_train, data_in_test, data_out_test
-
 """
 Given a batch size and training data, train network on the data, and
 return the trained network
@@ -94,14 +32,14 @@ def train_network(dat_in_train, dat_out_train, batch_size, nunits=7, \
                   epochs=100, stateful=True):
     assert len(dat_in_train.shape) == 3, 'check shape of dat_in_train'
     assert len(dat_out_train.shape) == 2, 'check shape of dat_out_train'
-    
+
     nfeat_in = dat_in_train.shape[2]
     nfeat_out = dat_out_train.shape[1]
-    
+
     # recurrent architecture, create input and output datasets
     rnn = Sequential()
-    
-    rnn.add(LSTM(nunits, 
+
+    rnn.add(LSTM(nunits,
             name='LSTM_1',
             stateful=True,
             input_shape=(1,nfeat_in),
@@ -112,7 +50,7 @@ def train_network(dat_in_train, dat_out_train, batch_size, nunits=7, \
                   name='Dense'))
     opt = keras.optimizers.RMSprop(lr=0.001)
     rnn.compile(loss='mse',optimizer=opt)
-    
+
     # fit model
     if stateful:
         hist = np.zeros(epochs)
@@ -136,7 +74,7 @@ def train_network(dat_in_train, dat_out_train, batch_size, nunits=7, \
         hist = hist.history['loss']
     return rnn, hist
 
-    
+
 """
 Given a trained network, evaluated it on testing data and plot the
 scatter plots.
@@ -163,4 +101,3 @@ def test_network(dat_in_test, dat_out_test, rnn, batch_size, feature_names, \
     y = scaler_output.inverse_transform(dat_pred)
     plotcorr(x, y, title=feature_names)
     return dat_pred
-
