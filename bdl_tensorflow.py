@@ -67,18 +67,21 @@ class LSTMCellVariational(LSTMCell):
                units,
                prior,
                kl_weight,
+               prior_trainable=True,
                **kwargs):
         super(LSTMCellVariational, self).__init__(units, **kwargs)
         self.prior = prior
+        self.prior_trainable=prior_trainable
         self.kl_weight = kl_weight
 
     @tf_utils.shape_type_conversion
     def build(self, input_shape):
         """Instead of learning kernels, learn parameters that parameterize variational posterior distributions over the kernels."""
         input_dim = input_shape[-1]
-        self._trainable_weights.append(self.prior.sig1)
-        self._trainable_weights.append(self.prior.sig2)
-        self._trainable_weights.append(self.prior.pi)
+        if self.prior_trainable:
+            self._trainable_weights.append(self.prior.sig1)
+            self._trainable_weights.append(self.prior.sig2)
+            self._trainable_weights.append(self.prior.pi)
 
         self.kernel_mu = self.add_weight(
             shape=(input_dim, self.units * 4),
@@ -178,6 +181,7 @@ class LSTMVariational(LSTM):
                units,
                prior,
                kl_weight,
+               prior_trainable=True,
                activation='tanh',
                recurrent_activation='hard_sigmoid',
                use_bias=True,
@@ -213,6 +217,7 @@ class LSTMVariational(LSTM):
             units,
             prior,
             kl_weight,
+            prior_trainable=prior_trainable,
             activation=activation,
             recurrent_activation=recurrent_activation,
             use_bias=use_bias,
@@ -249,17 +254,19 @@ class LSTMVariational(LSTM):
 
 class DenseVariational(Layer):
     """Almost entirely taken from Krasser's tutorial on Bayes by Backprop. I've added my own prior formulation"""
-    def __init__(self, output_dim, prior, kl_weight, activation=None, **kwargs):
+    def __init__(self, output_dim, prior, kl_weight, prior_trainable=True, activation=None, **kwargs):
         self.output_dim = output_dim
         self.prior = prior
         self.kl_weight = kl_weight
+        self.prior_trainable = prior_trainable
         self.activation = activations.get(activation)
         super().__init__(**kwargs)
 
     def build(self, input_shape):
-        self._trainable_weights.append(self.prior.sig1)
-        self._trainable_weights.append(self.prior.sig2)
-        self._trainable_weights.append(self.prior.pi)
+        if self.prior_trainable:
+            self._trainable_weights.append(self.prior.sig1)
+            self._trainable_weights.append(self.prior.sig2)
+            self._trainable_weights.append(self.prior.pi)
 
         self.kernel_mu = self.add_weight(name='kernel_mu',
                                     shape=(input_shape[1], self.output_dim),
