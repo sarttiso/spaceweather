@@ -265,3 +265,54 @@ def datasplit(data_in, data_out, batch_size, train_percent=0.8, lahead=1, \
     data_in_test = data_in[testidx,:]
     data_out_test = data_out[testidx,:]
     return data_in_train, data_out_train, data_in_test, data_out_test
+
+
+def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
+    """
+    This function computes reliability curves for first exceedance of a given threshold in a time series. Given a probilistic forecast of exceedance of the threshold, this function will compute the actual observed exceedance rate of the threshold (at that probability level). Given that we  always have finite data, we first bin the data into intervals of probability.
+    
+    IN:
+        pred: list of objects with cdf() method (e.g. scipy stats object) to evaulate distribution function
+        obs: array of observations equal in length to pred
+        thres: threshold for which to compute exceedance rates
+        bin_edges: array-like of bin edges of probabilities to consider
+        exc: 'geq' (default) or 'leq', direction in which to consider exceedance
+        first (bool): (default=True) whether to only consider first exceedance in a sequence of consecutive exceedances or to consider all exceedances of threshold
+        
+    OUT:
+        obs_exc: for bins, returns observed exceedance rates
+    """
+    nobs = len(obs)
+    
+    # compute exceedances indices
+    if exc == 'geq':
+        exc_idx = obs > thres
+    elif exc == 'leq':
+        exc_idx = obs < thres
+    
+    # if we only want first exceendances, find them
+    if first:
+        exc_idx = findseq(exc_idx, 1)
+        exc_idx = exc_idx[:, 0]
+        tmp_idx = np.zeros(nobs, dtype=bool)
+        tmp_idx[exc_idx] = True
+        exc_idx = tmp_idx
+        
+    # for each prediction, compute exceedance probability of threshold
+    prob_pred = [cur_pred.cdf(thres) for cur_pred in pred]
+    prob_pred = np.asarray(prob_pred).reshape(-1)
+    if exc =='geq':
+        prob_pred = 1-prob_pred
+    
+    nbins = len(bin_edges) - 1
+    obs_exc = np.zeros(nbins)
+    for ii in range(nbins):
+        cur_idx = (prob_pred >= bin_edges[ii]) & (prob_pred < bin_edges[ii+1])
+        n_in_bin = np.sum(cur_idx)
+        # if no predicted probabilities fall in bin, ignore
+        if n_in_bin == 0:
+            obs_exc[ii] = np.nan
+        else:
+            obs_exc[ii] = np.sum(exc_idx[cur_idx])/n_in_bin
+    return obs_exc
+            
