@@ -34,6 +34,7 @@ Data are organized by files containing different datasets organized roughly by s
 - [omni_hourly_1998-2018_nogaps](omni_hourly_1998-2018_nogaps.h5) :
 - [omni_hourly_1998-2018](omni_hourly_1998-2018_nogaps) :
 - [NS41_GPS_hourly](NS41_GPS_hourly.h5) :
+- [GEOS_xrs_hourly_1986-2018_nogaps](GEOS_xrs_hourly_1986-2018_nogaps.h5) : Short and long channel x-ray flux measurements gathered by the [GOES mission](https://www.ngdc.noaa.gov/stp/satellite/goes/) satellites from 1986-2018. More data is available, but the specification of primary and secondary satellites since 1986 facilitated downloading this dataset.
 - [external_coefficients](external_coefficients.ipynb) :
 
 
