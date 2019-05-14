@@ -316,3 +316,118 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
             obs_exc[ii] = np.sum(exc_idx[cur_idx])/n_in_bin
     return obs_exc
             
+
+class Sampler():
+    """
+    Class for sampling from input and ouput data to create training and testing 
+    splits. This class allows the user to avoid nan values in the data during 
+    sampling and thereby isolate sequences of consecutive data (in the case of
+    series data) of size batch_size. No data must be specified as np.nans.
+    """
+    def __init__(self, data_in, data_out):
+        """
+        input and output data must have same number of entries, with data
+        dimensionality along the second and following dimensions.
+        
+        data_in (nd.array): dimensions (n_obs x input_dim)
+        data_out (nd.array): dimensions (n_obs x output_dim)
+        """
+        self.n_obs = data_in.shape[0]
+        assert self.n_obs == data_out.shape[0], \
+            'number of obsevations must be same in data_in and data_out'
+            
+        # input and output dimensionalities
+        self.d_in = data_in.shape[1]
+        self.d_out = data_out.shape[1]
+        
+        # store data
+        self.data_in = data_in
+        self.data_out = data_out
+        
+        # compute indices of overlapping data (i.e. points without any nans)
+        self.dat_idx = \
+         np.logical_and(np.all(np.logical_not(np.isnan(data_in)), axis=1),
+                        np.all(np.logical_not(np.isnan(data_out)), axis=1))
+        
+        
+    def split(self, 
+              batch_size, 
+              train_frac=0.8, 
+              test_frac=0.2, 
+              val_frac=0., 
+              shuffle=False,
+              overlap=False):
+        """
+        Split data into training, testing (and validation) sets
+        
+        shuffle: barring no data gaps, keep data in consecutive order. if true,
+            shuffle order of batches NOT IMPLEMENTED YET
+        overlap: (default False) in regions where continuous data length is not 
+            a multiple of the batch_size, allow the final batch to overlap with
+            the previous batch NOT IMPLEMENTED YET
+        """
+        assert train_frac + test_frac + val_frac == 1.0, \
+            'splits must sum to one'
+        
+        # indices and legnths of data sequences
+        dat_seq = findseq(self.dat_idx, 1)
+        
+        assert np.any(batch_size < dat_seq[:,2]), \
+            'batch_size too large for data gaps'
+        
+        # only interested in those longer than batch size
+        dat_seq = dat_seq[np.argwhere(dat_seq[:,2] > batch_size).squeeze()]
+    
+        # total number of continuous data sequences longer than batch_size
+        n_seq = dat_seq.shape[0]
+            
+        # construct batches
+        batches_in = []
+        batches_out = []
+        for ii in range(n_seq):
+            n_batch_in_seq = np.floor(dat_seq[ii,2]/batch_size).astype(int)
+            cur_seq_in = []
+            cur_seq_out = []
+            for jj in range(n_batch_in_seq):
+                idx = slice(dat_seq[ii, 0] + jj*batch_size, 
+                            dat_seq[ii, 0] + (jj+1)*batch_size)
+                cur_seq_in.append(self.data_in[idx])
+                cur_seq_out.append(self.data_out[idx])
+            if overlap:
+                pass
+            cur_seq_in = np.concatenate(cur_seq_in, axis=0)
+            cur_seq_out = np.concatenate(cur_seq_out, axis=0)
+            batches_in.append(cur_seq_in)
+            batches_out.append(cur_seq_out)
+            
+        batches_in = np.concatenate(batches_in, axis=0)
+        batches_out = np.concatenate(batches_out, axis=0)
+            
+        # split batches into training, testing, and validation sets
+        n_batch = int(batches_in.shape[0]/batch_size)
+        
+        n_train = np.floor(train_frac*n_batch).astype(int)
+        n_val = np.floor(val_frac*n_batch).astype(int)
+        n_test = n_batch - n_train - n_val
+    
+        if shuffle:
+            pass
+        
+        # training data
+        train_idx = slice(0, batch_size * n_train)
+        train_in = batches_in[train_idx]
+        train_out = batches_out[train_idx]
+        
+        # testing data
+        test_idx = slice(batch_size * n_train, 
+                         batch_size * (n_train + n_test))
+        test_in = batches_in[test_idx]
+        test_out = batches_out[test_idx]
+        
+        # validation data
+        val_idx = slice(batch_size * (n_train + n_test),
+                        batch_size * (n_train + n_test + n_val))
+        val_in = batches_in[val_idx] 
+        val_out = batches_out[val_idx]
+        
+        return train_in, train_out, test_in, test_out, val_in, val_out
