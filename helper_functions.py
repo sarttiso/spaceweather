@@ -317,7 +317,7 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
     return obs_exc
             
 
-class Sampler():
+class Dataset():
     """
     Class for sampling from input and ouput data to create training and testing 
     splits. This class allows the user to avoid nan values in the data during 
@@ -341,8 +341,8 @@ class Sampler():
         self.d_out = data_out.shape[1]
         
         # store data
-        self.data_in = data_in
-        self.data_out = data_out
+        self.data_in = data_in.astype(np.float32)
+        self.data_out = data_out.astype(np.float32)
         
         # compute indices of overlapping data (i.e. points without any nans)
         self.dat_idx = \
