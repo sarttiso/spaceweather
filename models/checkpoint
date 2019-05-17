@@ -1,0 +1,2 @@
+model_checkpoint_path: "q10out_SWin_Gumbel_t6_weights"
+all_model_checkpoint_paths: "q10out_SWin_Gumbel_t6_weights"
