@@ -9,6 +9,7 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from scipy.stats import kde
+import tensorflow as tf
 from sklearn import preprocessing
 
 """
@@ -377,6 +378,9 @@ class Dataset():
         
         # only interested in those longer than batch size
         dat_seq = dat_seq[np.argwhere(dat_seq[:,2] > batch_size).squeeze()]
+        
+        # make sure we have 2D array
+        dat_seq = dat_seq.reshape(-1, 3)
     
         # total number of continuous data sequences longer than batch_size
         n_seq = dat_seq.shape[0]
@@ -384,6 +388,7 @@ class Dataset():
         # construct batches
         batches_in = []
         batches_out = []
+
         for ii in range(n_seq):
             n_batch_in_seq = np.floor(dat_seq[ii,2]/batch_size).astype(int)
             cur_seq_in = []
@@ -431,3 +436,10 @@ class Dataset():
         val_out = batches_out[val_idx]
         
         return train_in, train_out, test_in, test_out, val_in, val_out
+    
+    
+class PeriodicHistory(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs={}):
+        if epoch % 10 == 0:
+            print('Epoch %d: Loss = %1.2f, MSE = %1.2e' % \
+                  (epoch, logs['loss'], logs['mse']))
