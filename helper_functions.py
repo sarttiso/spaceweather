@@ -291,7 +291,7 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
     elif exc == 'leq':
         exc_idx = obs < thres
     
-    # if we only want first exceendances, find them
+    # if we only want first exceedances, find them
     if first:
         exc_idx = findseq(exc_idx, 1)
         exc_idx = exc_idx[:, 0]
@@ -310,8 +310,8 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
     for ii in range(nbins):
         cur_idx = (prob_pred >= bin_edges[ii]) & (prob_pred < bin_edges[ii+1])
         n_in_bin = np.sum(cur_idx)
-        # if no predicted probabilities fall in bin, ignore
-        if n_in_bin == 0:
+        # if fewer than 50 predicted probabilities fall in bin, ignore
+        if n_in_bin <= 50:
             obs_exc[ii] = np.nan
         else:
             obs_exc[ii] = np.sum(exc_idx[cur_idx])/n_in_bin
@@ -357,7 +357,8 @@ class Dataset():
               test_frac=0.2, 
               val_frac=0., 
               shuffle=False,
-              overlap=False):
+              overlap=False,
+              ext_array=None):
         """
         Split data into training, testing (and validation) sets
         
@@ -366,6 +367,9 @@ class Dataset():
         overlap: (default False) in regions where continuous data length is not 
             a multiple of the batch_size, allow the final batch to overlap with
             the previous batch NOT IMPLEMENTED YET
+        idx_array: (default None) array to be split in the same way as the 
+            training, testing, and validation sets. Creates 3 additional
+            outputs
         """
         assert train_frac + test_frac + val_frac == 1.0, \
             'splits must sum to one'
@@ -375,6 +379,10 @@ class Dataset():
         
         assert np.any(batch_size < dat_seq[:,2]), \
             'batch_size too large for data gaps'
+            
+        # make sure extra array, if requested, appropriate size
+        if np.all(ext_array != None):
+            assert len(ext_array) == self.n_obs, 'ext_array wrong size'
         
         # only interested in those longer than batch size
         dat_seq = dat_seq[np.argwhere(dat_seq[:,2] > batch_size).squeeze()]
@@ -385,28 +393,28 @@ class Dataset():
         # total number of continuous data sequences longer than batch_size
         n_seq = dat_seq.shape[0]
             
+        # create batch indices
+        idx = np.zeros(self.n_obs, dtype=bool)
+        
         # construct batches
         batches_in = []
         batches_out = []
 
         for ii in range(n_seq):
             n_batch_in_seq = np.floor(dat_seq[ii,2]/batch_size).astype(int)
-            cur_seq_in = []
-            cur_seq_out = []
-            for jj in range(n_batch_in_seq):
-                idx = slice(dat_seq[ii, 0] + jj*batch_size, 
-                            dat_seq[ii, 0] + (jj+1)*batch_size)
-                cur_seq_in.append(self.data_in[idx])
-                cur_seq_out.append(self.data_out[idx])
+            cur_idx = slice(dat_seq[ii, 0], 
+                        dat_seq[ii, 0] + n_batch_in_seq*batch_size)
+            idx[cur_idx] = True
+            # include extra batch at end with overlap?
             if overlap:
                 pass
-            cur_seq_in = np.concatenate(cur_seq_in, axis=0)
-            cur_seq_out = np.concatenate(cur_seq_out, axis=0)
-            batches_in.append(cur_seq_in)
-            batches_out.append(cur_seq_out)
-            
-        batches_in = np.concatenate(batches_in, axis=0)
-        batches_out = np.concatenate(batches_out, axis=0)
+                
+        batches_in = self.data_in[idx]
+        batches_out = self.data_out[idx]
+        
+        # also split ext array if requested
+        if np.all(ext_array != None):
+            batches_ext_array = ext_array[idx]
             
         # split batches into training, testing, and validation sets
         n_batch = int(batches_in.shape[0]/batch_size)
@@ -435,7 +443,14 @@ class Dataset():
         val_in = batches_in[val_idx] 
         val_out = batches_out[val_idx]
         
-        return train_in, train_out, test_in, test_out, val_in, val_out
+        # split ext_array
+        if np.all(ext_array != None):
+            train_ext = batches_ext_array[train_idx]
+            test_ext = batches_ext_array[test_idx]
+            val_ext = batches_ext_array[val_idx]
+        
+        return train_in, train_out, test_in, test_out, val_in, val_out, \
+            train_ext, test_ext, val_ext
     
     
 class PeriodicHistory(tf.keras.callbacks.Callback):
