@@ -300,8 +300,10 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
         exc_idx = tmp_idx
         
     # for each prediction, compute exceedance probability of threshold
-    prob_pred = [cur_pred.cdf(thres) for cur_pred in pred]
-    prob_pred = np.asarray(prob_pred).reshape(-1)
+#     prob_pred = [cur_pred.cdf(thres) for cur_pred in pred]
+#     prob_pred = np.asarray(prob_pred).reshape(-1)
+    prob_pred = pred.cdf(thres)
+    
     if exc =='geq':
         prob_pred = 1-prob_pred
     
