@@ -269,7 +269,7 @@ def datasplit(data_in, data_out, batch_size, train_percent=0.8, lahead=1, \
     return data_in_train, data_out_train, data_in_test, data_out_test
 
 
-def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
+def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=500):
     """
     This function computes reliability curves for first exceedance of a given threshold in a time series. Given a probilistic forecast of exceedance of the threshold, this function will compute the actual observed exceedance rate of the threshold (at that probability level). Given that we  always have finite data, we first bin the data into intervals of probability.
     
@@ -313,26 +313,35 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
         exc_idx = tmp_idx
     
     nbins = len(bin_edges) - 1
-    obs_exc = np.zeros(nbins)
-    for ii in range(nbins):
-        cur_idx = (prob_pred >= bin_edges[ii]) & (prob_pred < bin_edges[ii+1])
-        n_in_bin = np.sum(cur_idx)
-        # if fewer than 50 predicted probabilities fall in bin, ignore
-        if n_in_bin <= 10:
-            obs_exc[ii] = np.nan
-        else:
-            obs_exc[ii] = np.sum(exc_idx[cur_idx])/n_in_bin
+    obs_exc = np.zeros((nbins, bootstrap))
+    for tt in range(bootstrap):
+        # resample from data
+        sam_idx = np.random.randint(0, nobs, nobs)
+        cur_prob_pred = prob_pred[sam_idx]
+        cur_exc_idx = exc_idx[sam_idx]
+        
+        for ii in range(nbins):
+            cur_idx = (cur_prob_pred >= bin_edges[ii]) & (cur_prob_pred < bin_edges[ii+1])
+            n_in_bin = np.sum(cur_idx)
+            # if fewer than 50 predicted probabilities fall in bin, ignore
+            if n_in_bin <= 10:
+                obs_exc[ii, tt] = np.nan
+            else:
+                obs_exc[ii, tt] = np.sum(cur_exc_idx[cur_idx])/n_in_bin
+
+    obs_exc_mean = np.mean(obs_exc, axis=1)
+    obs_exc_std = np.std(obs_exc, axis=1)
     
     # finally compute Brier score
-    brier = 0;
-    obs_exc_total = np.sum(exc_idx)/nobs
-    bin_cen = (bin_edges[1:] + bin_edges[:-1]) / 2
-    for ii in range(nbins):
-        brier += 1/nobs*(n_in_bin*(obs_exc[ii]-bin_cen[ii])**2) - \
-                 1/nobs*(n_in_bin*(bin_cen[ii]-obs_exc_total)**2)
-    brier += obs_exc_total*(1-obs_exc_total)
+#     brier = 0;
+#     obs_exc_total = np.sum(exc_idx)/nobs
+#     bin_cen = (bin_edges[1:] + bin_edges[:-1]) / 2
+#     for ii in range(nbins):
+#         brier += 1/nobs*(n_in_bin*(obs_exc[ii]-bin_cen[ii])**2) - \
+#                  1/nobs*(n_in_bin*(bin_cen[ii]-obs_exc_total)**2)
+#     brier += obs_exc_total*(1-obs_exc_total)
            
-    return obs_exc, brier
+    return obs_exc_mean, obs_exc_std
             
 
 class Dataset():
