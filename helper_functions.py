@@ -10,6 +10,7 @@ import warnings
 import matplotlib.pyplot as plt
 from scipy.stats import kde
 import tensorflow as tf
+import sklearn
 from sklearn import preprocessing
 
 """
@@ -283,6 +284,18 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
     OUT:
         obs_exc: for bins, returns observed exceedance rates
     """
+    # for each prediction, compute exceedance probability of threshold
+    prob_pred = pred.cdf(thres)
+    
+    # take other complementary probability mass for greater than or equal
+    if exc =='geq':
+        prob_pred = 1-prob_pred
+    
+    # ignore nans
+    val_idx = np.logical_not(np.isnan(prob_pred))
+    prob_pred = prob_pred[val_idx]
+    obs = obs[val_idx]
+    
     nobs = len(obs)
     
     # compute exceedances indices
@@ -298,12 +311,6 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
         tmp_idx = np.zeros(nobs, dtype=bool)
         tmp_idx[exc_idx] = True
         exc_idx = tmp_idx
-        
-    # for each prediction, compute exceedance probability of threshold
-    prob_pred = pred.cdf(thres)
-    
-    if exc =='geq':
-        prob_pred = 1-prob_pred
     
     nbins = len(bin_edges) - 1
     obs_exc = np.zeros(nbins)
@@ -311,11 +318,21 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True):
         cur_idx = (prob_pred >= bin_edges[ii]) & (prob_pred < bin_edges[ii+1])
         n_in_bin = np.sum(cur_idx)
         # if fewer than 50 predicted probabilities fall in bin, ignore
-        if n_in_bin <= 50:
+        if n_in_bin <= 10:
             obs_exc[ii] = np.nan
         else:
             obs_exc[ii] = np.sum(exc_idx[cur_idx])/n_in_bin
-    return obs_exc
+    
+    # finally compute Brier score
+    brier = 0;
+    obs_exc_total = np.sum(exc_idx)/nobs
+    bin_cen = (bin_edges[1:] + bin_edges[:-1]) / 2
+    for ii in range(nbins):
+        brier += 1/nobs*(n_in_bin*(obs_exc[ii]-bin_cen[ii])**2) - \
+                 1/nobs*(n_in_bin*(bin_cen[ii]-obs_exc_total)**2)
+    brier += obs_exc_total*(1-obs_exc_total)
+           
+    return obs_exc, brier
             
 
 class Dataset():
