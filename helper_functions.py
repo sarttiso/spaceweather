@@ -323,12 +323,14 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=50
         
         # bin data by probability bins
         bin_idx = np.digitize(cur_prob_pred, bin_edges)-1
-        obs_exc[:, tt] = np.bincount(bin_idx, weights=cur_exc_idx)/np.bincount(bin_idx)
+        bin_c = np.bincount(bin_idx, weights=cur_exc_idx)/np.bincount(bin_idx)
+        obs_exc[0:len(bin_c), tt] = bin_c
         
         # also compute consistency computation (see Brocker and Smith, 2007)
         z = np.random.rand(nobs)
         y = z < cur_prob_pred
-        consist[:, tt] = np.bincount(bin_idx, weights=y)/np.bincount(bin_idx)
+        bin_c = np.bincount(bin_idx, weights=y)/np.bincount(bin_idx)
+        consist[0:len(bin_c), tt] = bin_c
     
     obs_exc_mean = np.mean(obs_exc, axis=1)
     obs_exc_std = np.std(obs_exc, axis=1)
