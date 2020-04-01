@@ -314,25 +314,33 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=50
     
     nbins = len(bin_edges) - 1
     obs_exc = np.zeros((nbins, bootstrap))
+    consist = np.zeros((nbins, bootstrap))
     for tt in range(bootstrap):
         # resample from data
         sam_idx = np.random.randint(0, nobs, nobs)
         cur_prob_pred = prob_pred[sam_idx]
         cur_exc_idx = exc_idx[sam_idx]
         
-        for ii in range(nbins):
-            cur_idx = (cur_prob_pred >= bin_edges[ii]) & (cur_prob_pred < bin_edges[ii+1])
-            n_in_bin = np.sum(cur_idx)
-            # if fewer than 50 predicted probabilities fall in bin, ignore
-            if n_in_bin <= 10:
-                obs_exc[ii, tt] = np.nan
-            else:
-                obs_exc[ii, tt] = np.sum(cur_exc_idx[cur_idx])/n_in_bin
-
+        # bin data by probability bins
+        bin_idx = np.digitize(cur_prob_pred, bin_edges)-1
+        obs_exc[:, tt] = np.bincount(bin_idx, weights=cur_exc_idx)/np.bincount(bin_idx)
+        
+        # also compute consistency computation (see Brocker and Smith, 2007)
+        z = np.random.rand(nobs)
+        y = z < cur_prob_pred
+        consist[:, tt] = np.bincount(bin_idx, weights=y)/np.bincount(bin_idx)
+    
     obs_exc_mean = np.mean(obs_exc, axis=1)
     obs_exc_std = np.std(obs_exc, axis=1)
+    obs_exc_pct = np.percentile(obs_exc, [2.5, 97.5], axis=1)
     
-    # finally compute Brier score
+    # compute consistency intervals 2.5-97.5 quantiles
+    consist_pct = np.percentile(consist, [2.5, 97.5], axis=1)
+           
+    return obs_exc_mean, obs_exc_pct, consist_pct
+   
+# not implemented as stand-alone function yet
+# def brier():
 #     brier = 0;
 #     obs_exc_total = np.sum(exc_idx)/nobs
 #     bin_cen = (bin_edges[1:] + bin_edges[:-1]) / 2
@@ -340,9 +348,7 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=50
 #         brier += 1/nobs*(n_in_bin*(obs_exc[ii]-bin_cen[ii])**2) - \
 #                  1/nobs*(n_in_bin*(bin_cen[ii]-obs_exc_total)**2)
 #     brier += obs_exc_total*(1-obs_exc_total)
-           
-    return obs_exc_mean, obs_exc_std
-            
+
 
 class Dataset():
     """
