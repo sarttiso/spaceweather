@@ -315,20 +315,27 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=50
     nbins = len(bin_edges) - 1
     obs_exc = np.zeros((nbins, bootstrap))
     consist = np.zeros((nbins, bootstrap))
+    
+    # bin data by probability bins
+    bin_idx = np.digitize(prob_pred, bin_edges)-1
+    
     for tt in range(bootstrap):
-        # resample from data
-        sam_idx = np.random.randint(0, nobs, nobs)
-        cur_prob_pred = prob_pred[sam_idx]
-        cur_exc_idx = exc_idx[sam_idx]
-        
-        # bin data by probability bins
-        bin_idx = np.digitize(cur_prob_pred, bin_edges)-1
+        # resample within each bin
+        cur_exc_idx = exc_idx.copy()
+        for ii in range(nbins):
+            cur_bin_idx = np.where(bin_idx==ii)[0]
+            n_in_bin = len(cur_bin_idx)
+            sam_idx = np.random.randint(0, n_in_bin, n_in_bin)
+            re_sam_idx = cur_bin_idx[sam_idx]
+            cur_exc_idx[cur_bin_idx] = cur_exc_idx[re_sam_idx]
+
         bin_c = np.bincount(bin_idx, weights=cur_exc_idx)/np.bincount(bin_idx)
         obs_exc[0:len(bin_c), tt] = bin_c
         
-        # also compute consistency computation (see Brocker and Smith, 2007)
+    # also compute consistency computation (see Brocker and Smith, 2007)
+    for tt in range(bootstrap):
         z = np.random.rand(nobs)
-        y = z < cur_prob_pred
+        y = z < prob_pred
         bin_c = np.bincount(bin_idx, weights=y)/np.bincount(bin_idx)
         consist[0:len(bin_c), tt] = bin_c
     
