@@ -296,6 +296,9 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=50
     prob_pred = prob_pred[val_idx]
     obs = obs[val_idx]
     
+    # set any predicted probabilities of 1 to 0.9999 (pathological case)
+    prob_pred[prob_pred==1] = 0.9999
+    
     nobs = len(obs)
     
     # compute exceedances indices
