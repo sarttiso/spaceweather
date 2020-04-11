@@ -318,6 +318,8 @@ def reliability(pred, obs, thres, bin_edges, exc='geq', first=True, bootstrap=50
     nbins = len(bin_edges) - 1
     obs_exc = np.zeros((nbins, bootstrap))
     consist = np.zeros((nbins, bootstrap))
+    obs_exc[:] = np.nan
+    consist[:] = np.nan
     
     # bin data by probability bins
     bin_idx = np.digitize(prob_pred, bin_edges)-1
