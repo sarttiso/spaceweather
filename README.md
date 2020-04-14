@@ -1,5 +1,7 @@
 # Geomagnetic Storm Forecasting
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3751682.svg)](https://doi.org/10.5281/zenodo.3751682)
+
 Notebooks for a project with aim of predicting the response of Earth's external magnetic field to solar activity via ''deep learning''.
 
 Note to self: first ssh @ela.cscs.ch _then_ ssh daint
